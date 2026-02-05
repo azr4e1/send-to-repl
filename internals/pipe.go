@@ -14,6 +14,7 @@ type MultiPlexer struct {
 	pipeReader *io.PipeReader
 	pipeWriter *io.PipeWriter
 	logger     *log.Logger
+	Transform  func(data []byte) []byte
 }
 
 func NewMultiPlexer(inputs []io.Reader, output []io.Writer, logger *log.Logger) *MultiPlexer {
@@ -29,6 +30,7 @@ func NewMultiPlexer(inputs []io.Reader, output []io.Writer, logger *log.Logger) 
 		pipeReader: pipeReader,
 		pipeWriter: pipeWriter,
 		logger:     logger,
+		Transform:  func(data []byte) []byte { return data },
 	}
 
 	go multiPlexer.listen()
@@ -42,7 +44,7 @@ func (mp *MultiPlexer) broadcast(p []byte) error {
 	_, err = mp.pipeWriter.Write(p)
 	errSlice = append(errSlice, err)
 	for _, w := range mp.outputs {
-		_, err = w.Write(p)
+		_, err = w.Write(mp.Transform(p))
 		errSlice = append(errSlice, err)
 	}
 
