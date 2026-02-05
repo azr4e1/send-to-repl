@@ -15,9 +15,10 @@ type MultiPlexer struct {
 	// Buffered data
 	buffer        []byte
 	dataRequested int
+	logger        *log.Logger
 }
 
-func NewMultiPlexer(inputs []io.Reader) *MultiPlexer {
+func NewMultiPlexer(inputs []io.Reader, logger *log.Logger) *MultiPlexer {
 	funnelReader := &MultiPlexer{
 		Inputs:    inputs,
 		bufChan:   make(chan []byte),
@@ -26,11 +27,12 @@ func NewMultiPlexer(inputs []io.Reader) *MultiPlexer {
 	}
 
 	go funnelReader.listen()
+	logger.Printf("listening")
 
 	return funnelReader
 }
 
-func readInput(fd io.Reader, xcomms chan []byte) error {
+func (mp *MultiPlexer) readInput(fd io.Reader) error {
 	buf := make([]byte, BufSize)
 	for {
 		n, err := fd.Read(buf)
@@ -39,8 +41,9 @@ func readInput(fd io.Reader, xcomms chan []byte) error {
 		}
 
 		if n > 0 {
-			xcomms <- buf[:n]
+			mp.bufChan <- buf[:n]
 		}
+		mp.logger.Printf("read from input")
 	}
 }
 
@@ -48,12 +51,13 @@ func (mp *MultiPlexer) listen() {
 	for _, i := range mp.Inputs {
 		input := i
 		go func() {
-			err := readInput(input, mp.bufChan)
+			err := mp.readInput(input)
 			if err != nil {
-				log.Println(err)
+				mp.logger.Println(err)
 			}
 		}()
 	}
+	mp.logger.Printf("launched all goroutines")
 
 	for {
 		data := <-mp.bufChan
@@ -65,6 +69,7 @@ func (mp *MultiPlexer) listen() {
 			mp.writeChan <- data
 			mp.dataRequested = 0
 		}
+		mp.logger.Printf("multiplexer loop")
 	}
 }
 
@@ -78,5 +83,6 @@ func (mp *MultiPlexer) Read(buf []byte) (int, error) {
 		buf[i] = data[i]
 	}
 
+	mp.logger.Printf("read action")
 	return n, nil
 }

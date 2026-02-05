@@ -20,9 +20,10 @@ type Repl struct {
 	NextLineChan chan string
 	ErrChan      chan error
 	BufSize      int
+	logger       *log.Logger
 }
 
-func NewRepl(command string) (*Repl, error) {
+func NewRepl(command string, logger *log.Logger) (*Repl, error) {
 	tokens, err := shlex.Split(command)
 	if err != nil {
 		return nil, err
@@ -57,14 +58,15 @@ func NewRepl(command string) (*Repl, error) {
 		NextLineChan: nextLine,
 		ErrChan:      errChan,
 		BufSize:      BufSize,
+		logger:       logger,
 	}
 
 	return repl, nil
 }
 
 // GetOutput reads from reader a bufsize amount until there is nothing to read
-func getOutput(reader io.Reader, writer io.Writer, bufSize int) error {
-	buf := make([]byte, bufSize)
+func (repl *Repl) getOutput(name string, reader io.Reader, writer io.Writer) error {
+	buf := make([]byte, repl.BufSize)
 
 	for {
 		n, err := reader.Read(buf)
@@ -77,19 +79,20 @@ func getOutput(reader io.Reader, writer io.Writer, bufSize int) error {
 				return err
 			}
 		}
+		repl.logger.Printf("%s just processed\n", name)
 	}
 }
 
 // Read REPL Output and send it to client
 func (repl *Repl) SendReplStdOut(clientInput io.Writer) error {
-	err := getOutput(repl.ReplStdout, clientInput, repl.BufSize)
+	err := repl.getOutput("stdout", repl.ReplStdout, clientInput)
 
 	return err
 }
 
 // Read REPL Error and send it to client
 func (repl *Repl) SendReplStdErr(clientInput io.Writer) error {
-	err := getOutput(repl.ReplStderr, clientInput, repl.BufSize)
+	err := repl.getOutput("stderr", repl.ReplStderr, clientInput)
 
 	return err
 }
@@ -102,6 +105,7 @@ func (repl *Repl) SendToRepl(clientOutput io.Reader) error {
 	for scanner.Scan() {
 		input := scanner.Text()
 		repl.NextLineChan <- input
+		repl.logger.Printf("%s just scanned a line\n", "stdin")
 	}
 	return scanner.Err()
 }
@@ -112,6 +116,7 @@ func (repl *Repl) ProcessExit() error {
 	if err := repl.Cmd.Wait(); err != nil {
 		log.Print(err)
 	}
+	repl.logger.Printf("process just terminated")
 	repl.DoneChan <- true
 	return nil
 }
@@ -121,6 +126,7 @@ func (repl *Repl) Run(clientOutput io.Reader, clientInput io.Writer, clientErr i
 	if err := repl.Cmd.Start(); err != nil {
 		return err
 	}
+	repl.logger.Printf("process started")
 
 	// manage subprocess termination gracefully
 	go func() {
@@ -129,6 +135,7 @@ func (repl *Repl) Run(clientOutput io.Reader, clientInput io.Writer, clientErr i
 			repl.ErrChan <- err
 		}
 	}()
+	repl.logger.Printf("launched termination handling")
 
 	// redirect stdout
 	go func() {
@@ -140,6 +147,7 @@ func (repl *Repl) Run(clientOutput io.Reader, clientInput io.Writer, clientErr i
 			repl.ErrChan <- err
 		}
 	}()
+	repl.logger.Printf("launched stdout redirection")
 
 	// redirect stderr
 	go func() {
@@ -151,6 +159,7 @@ func (repl *Repl) Run(clientOutput io.Reader, clientInput io.Writer, clientErr i
 			repl.ErrChan <- err
 		}
 	}()
+	repl.logger.Printf("launched stderr redirection")
 
 	// redirect stdin
 	go func() {
@@ -161,6 +170,7 @@ func (repl *Repl) Run(clientOutput io.Reader, clientInput io.Writer, clientErr i
 		// reached EOF, break
 		repl.DoneChan <- true
 	}()
+	repl.logger.Printf("launched stdin redirection")
 
 	for {
 		select {
@@ -171,5 +181,6 @@ func (repl *Repl) Run(clientOutput io.Reader, clientInput io.Writer, clientErr i
 		case err := <-repl.ErrChan:
 			return err
 		}
+		repl.logger.Println("select loop")
 	}
 }
