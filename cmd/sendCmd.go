@@ -14,3 +14,7 @@ var (
 )
 
 func Send(command *cobra.Command, args []string) {}
+
+func init() {
+	rootCmd.AddCommand(sendCmd)
+}

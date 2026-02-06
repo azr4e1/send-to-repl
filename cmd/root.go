@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const Version = "0.1.0"
+const Version = "v0.1.0"
 
 var (
 	rootCmd = &cobra.Command{
@@ -21,14 +21,4 @@ func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
 	}
-}
-
-func init() {
-	cobra.OnInitialize(initConfig)
-
-	rootCmd.AddCommand(runCmd)
-	rootCmd.AddCommand(sendCmd)
-}
-
-func initConfig() {
 }

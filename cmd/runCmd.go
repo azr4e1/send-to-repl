@@ -14,3 +14,8 @@ var (
 )
 
 func Run(command *cobra.Command, args []string) {}
+
+func init() {
+	rootCmd.AddCommand(runCmd)
+	// runCmd.Flags().IntVarP()
+}
