@@ -78,14 +78,12 @@ func (mp *MultiPlexer) Listen() {
 	var wg sync.WaitGroup
 	for _, i := range mp.inputs {
 		input := i
-		wg.Add(1)
-		go func() {
+		wg.Go(func() {
 			err := mp.pipe(input)
 			if err != nil {
 				mp.ErrHandler(err)
 			}
-			wg.Done()
-		}()
+		})
 	}
 	mp.Logger.Printf("launched all goroutines")
 	mp.Logger.Printf("listening")
@@ -101,4 +99,8 @@ func (mp *MultiPlexer) Listen() {
 func (mp *MultiPlexer) Read(p []byte) (int, error) {
 	mp.Logger.Print("reading from buffer")
 	return mp.pipeReader.Read(p)
+}
+
+func (mp *MultiPlexer) Close() error {
+	return mp.pipeWriter.Close()
 }

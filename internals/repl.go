@@ -113,7 +113,7 @@ func (repl *Repl) Run(clientOutput io.Reader, clientInput io.Writer, clientErr i
 	go func() {
 		err := repl.SendReplStdOut(clientInput)
 		if err != nil {
-			if err == io.EOF {
+			if errors.Is(err, io.EOF) {
 				return
 			}
 			repl.ErrHandler(err)

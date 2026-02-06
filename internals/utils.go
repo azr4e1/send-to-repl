@@ -8,9 +8,7 @@ import (
 )
 
 var DiscardLogger = NewLogger(io.Discard, "")
-var DefaultErrHandler = func(err error) {
-	return
-}
+var DefaultErrHandler = func(err error) {}
 
 type ErrHandler func(error)
 

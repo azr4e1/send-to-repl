@@ -8,8 +8,8 @@ import (
 )
 
 type TempNPipe struct {
-	tempDir string
-	name    string
+	TempDir string
+	Name    string
 	fd      *os.File
 }
 
@@ -30,25 +30,25 @@ func MkTempFifo(name string) (*TempNPipe, error) {
 	}
 
 	return &TempNPipe{
-		tempDir: tempDir,
-		name:    npipePath,
+		TempDir: tempDir,
+		Name:    npipePath,
 		fd:      fd,
 	}, nil
 }
 
-func (unp *TempNPipe) Read(p []byte) (int, error) {
-	return unp.fd.Read(p)
+func (tnp *TempNPipe) Read(p []byte) (int, error) {
+	return tnp.fd.Read(p)
 }
 
-func (unp *TempNPipe) Write(p []byte) (int, error) {
-	return unp.fd.Write(p)
+func (tnp *TempNPipe) Write(p []byte) (int, error) {
+	return tnp.fd.Write(p)
 }
 
-func (unp *TempNPipe) Close() error {
-	err := unp.fd.Close()
+func (tnp *TempNPipe) Close() error {
+	err := tnp.fd.Close()
 	if err != nil {
 		return err
 	}
-	err = os.RemoveAll(unp.tempDir)
+	err = os.RemoveAll(tnp.TempDir)
 	return err
 }
